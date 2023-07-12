@@ -1,17 +1,23 @@
 import rclpy
 import os.path
 import json
-from rclpy.node import Node
+# import cslam.lidar_pr.icp_utils as icp_utils
+import open3d
 
+from rclpy.node import Node
 from cslam_common_interfaces.msg import PoseGraph
+from cslam_common_interfaces.msg import VizPointCloud
+
 
 class CslamStorage(Node):
 
     def __init__(self):
         super().__init__('cslam_storage')
-        # self.subscription  # prevent unused variable warning
         self.pose_graph_storage_subscriber = self.create_subscription(
                 PoseGraph, '/cslam/viz/pose_graph', self.pose_graph_storage_callback, 10)
+        self.pointclouds_storage_subscriber = self.node.create_subscription(
+                VizPointCloud, '/cslam/viz/keyframe_pointcloud', self.point_clouds_storage_callback, 10)
+        
         self.pose_graph_to_store = {}
 
         self.declare_parameters(
@@ -107,6 +113,19 @@ class CslamStorage(Node):
         self.pose_graph_to_store[msg.robot_id]["edges"] = list(map(self.pose_graph_edge_to_dict, msg.edges))
 
         self.store_pose_graph(msg)
+
+    def point_clouds_storage_callback(self, pc_msg):
+        """Store point cloud data into a given .pcd file 
+
+        Args:
+            pc_msg (VizPointCloud): point cloud message 
+        """       
+        robot_folder = self.params["map_path"] + "/robot" + str(pc_msg.robot_id)
+        os.makedirs(robot_folder, exist_ok=True)        
+        pcd_file_path = robot_folder + "/keyframe_" + str(pc_msg.keyframe_id) + ".pcd"
+        
+        # point_cloud = icp_utils.ros_to_open3d(pc_msg.pointcloud)
+        open3d.io.write_point_cloud(pcd_file_path, [point_cloud])
 
 def main(args=None):
     rclpy.init(args=args)
