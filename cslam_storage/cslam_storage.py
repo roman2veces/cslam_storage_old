@@ -4,10 +4,6 @@ import json
 from rclpy.node import Node
 
 from cslam_common_interfaces.msg import PoseGraph
-from cslam_common_interfaces.msg import PoseGraphValue
-from cslam_common_interfaces.msg import PoseGraphEdge
-from cslam_common_interfaces.msg import MultiRobotKey
-from geometry_msgs.msg import Pose
 
 class CslamStorage(Node):
 
@@ -49,7 +45,8 @@ class CslamStorage(Node):
             #     pose_graph_to_store = json.load(json_file)
 
             json.dump(self.pose_graph_to_store, json_file)
-
+    
+    # Conversion methods
     def pose_graph_value_to_dict(self, pose_graph_value):
         """ Convert cslam_common_interfaces/msg/PoseGraphValue to dict
             Attention: the "key" property is not converted 
@@ -96,43 +93,6 @@ class CslamStorage(Node):
             "noise_std": edge.noise_std.tolist()
         }
 
-    # Conversion methods
-    def dict_to_pose(self, dict):
-        """Convert dict to geometry_msgs/msg/Pose""" 
-        pose = Pose()
-        pose.position.x = dict['position']['x']
-        pose.position.y = dict['position']['y']
-        pose.position.z = dict['position']['z']
-        pose.orientation.x = dict['orientation']['x']
-        pose.orientation.y = dict['orientation']['y']
-        pose.orientation.z = dict['orientation']['z']
-        pose.orientation.w = dict['orientation']['w']
-        return pose
-
-    def dict_to_pose_graph_value(self, dict, robot_id, keyframe_id):
-        """ Convert dict to cslam_common_interfaces/msg/PoseGraphValue
-            Attention: the "key" property is not converted
-        """
-        pose_graph_value = PoseGraphValue()
-        pose_graph_value.key = MultiRobotKey()
-        pose_graph_value.key.robot_id = robot_id
-        pose_graph_value.key.keyframe_id = keyframe_id
-        pose_graph_value.pose = self.dict_to_pose(dict)
-        return pose_graph_value
-    
-    def dict_to_pose_graph_edge(self, dict):
-        """ Convert dict to cslam_common_interfaces/msg/PoseGraphEdge """
-        pose_graph_edge = PoseGraphEdge()
-        pose_graph_edge.key_from = MultiRobotKey()
-        pose_graph_edge.key_from.robot_id = int(dict["key_from"]["robot_id"])
-        pose_graph_edge.key_from.keyframe_id = int(dict["key_from"]["keyframe_id"])
-        pose_graph_edge.key_to = MultiRobotKey()
-        pose_graph_edge.key_to.robot_id = int(dict["key_to"]["robot_id"])
-        pose_graph_edge.key_to.keyframe_id = int(dict["key_to"]["keyframe_id"])
-        pose_graph_edge.measurement = self.dict_to_pose(dict["measurement"])
-        pose_graph_edge.noise_std = dict["noise_std"]                    
-        return pose_graph_edge
-
     def pose_graph_storage_callback(self, msg):    
         # Initialize robot pose graph if it doesn't exist yet
         if msg.robot_id not in self.pose_graph_to_store:
@@ -147,7 +107,6 @@ class CslamStorage(Node):
         self.pose_graph_to_store[msg.robot_id]["edges"] = list(map(self.pose_graph_edge_to_dict, msg.edges))
 
         self.store_pose_graph(msg)
-
 
 def main(args=None):
     rclpy.init(args=args)
